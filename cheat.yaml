@@ -1,0 +1,63 @@
+
+####
+
+good infos
+
+https://www.tailored.cloud/devops/how-to-filter-and-map-lists-in-ansible/
+
+####  debug a variable - Hostvars has all variables
+
+- hosts: k8s_hosts
+  tasks:
+    - debug:
+        var: hostvars
+
+### Get information from a remote file (SLURP - careful this is in b64)
+
+    - name: Get boot command file for to see if modification is required
+      slurp: 
+        src: "/boot/firmware/cmdline.txt"
+      register: boot_command_file
+    - name: Modify boot command with cgroup settings
+      replace:
+        path: /boot/firmware/cmdline.txt
+        regexp: '^(net(.*)$)'
+        replace: '\1 cgroup_memory=1 cgroup_enable=memory'
+      when: "'cgroup' not in (boot_command_file['content'] | b64decode)"
+      become: true
+
+
+### Conditional test
+
+      when: item in ["workers","masters"]
+      when: "'cgroup' not in (boot_command_file['content'] | b64decode)"
+
+### Loop through list: specified or typed 
+
+- name: "loop through list"
+  debug:
+    msg: "An item: {{ item }}"
+  with_items:
+    - 1
+    - 2
+    - 3
+
+- hosts: k8s_hosts
+  gather_facts: no
+  tasks:
+    - name: "loop through list"
+      debug:
+        msg: "An item: {{ item }}"
+      with_items: "{{group_names}}"
+      when: 
+
+### regex replace for string substitution (removes trailing s)
+
+- hosts: k8s_hosts
+  gather_facts: no
+  tasks:
+    - name: "loop through list"
+      debug:
+        msg: "{{ (item | regex_replace('(^.*)s$', '\\1')) }}"
+      when: item in ["workers","masters"]
+      with_items: "{{group_names}}"

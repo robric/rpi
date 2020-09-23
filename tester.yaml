@@ -1,0 +1,38 @@
+
+#- hosts: local
+#  tasks:
+#    - name: Setting host facts using complex arguments
+#      set_fact:
+#        trimmed_names: {{ }}
+#   
+#- hosts: k8s_hosts
+#  gather_facts: no
+#  tasks:
+#    - name: "loop through list"
+#      debug:
+#        msg: "{{ (item.replace('s',''))"
+#      when: item in ["workers","masters"]
+#      with_items: "{{group_names}}"
+
+- hosts: k8s_hosts
+  gather_facts: no
+  tasks:
+    - name: "loop through list"
+      debug:
+        msg: "{{ (item | regex_replace('(^.*)s$', '\\1')) }}"
+      when: item in ["workers","masters"]
+      with_items: "{{group_names}}"
+
+    - debug:
+        var: 
+
+    - name: Set a hostnames
+      hostname:
+        name: "{{ansible_}}"
+
+
+- hosts: k8s_hosts
+  gather_facts: no
+  tasks:
+    - debug:
+        var: hostvars
