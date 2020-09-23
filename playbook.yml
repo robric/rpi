@@ -1,10 +1,11 @@
-- hosts: local 
-  gather_facts: no
-  tasks:
-    - name: install pexpect
-      pip:
-        name: pexpect
-      become: yes
+### Install expect on localhost (not there by default on K8s)
+#- hosts: local 
+#  gather_facts: no
+#  tasks:
+#    - name: install pexpect
+#      pip:
+#        name: pexpect
+#      become: yes
 - hosts: k8s_hosts
   gather_facts: no
   vars:
@@ -12,21 +13,50 @@
     ssh_command_pass: ubuntu123!
   remote_user: root
   tasks:
-    - name: Set password if expired (happens after fresh reinstall)
-      delegate_to: 127.0.0.1
-      ignore_errors: yes 
-      expect:
-        command: ssh {{ ansible_ssh_common_args }} {{ ansible_user }}@{{ inventory_hostname }}
-        timeout: 10
-        responses:
-          "password:": "{{ ssh_command_pass_old }}"
-          "Current password:": "{{ ssh_command_pass_old }}"
-          "New password:": "{{ ssh_command_pass }}"
-          "Retype new password:": "{{ ssh_command_pass }}"
-#          # if succesfully login then quit
-          "\\~\\]\\$": exit
-      register: status
-      changed_when: "'password updated successfully' in status.stdout"
+#    - name: Set password if expired (happens after fresh reinstall)
+#      delegate_to: 127.0.0.1
+#      ignore_errors: yes 
+#      expect:
+#        command: ssh {{ ansible_ssh_common_args }} {{ ansible_user }}@{{ inventory_hostname }}
+#        timeout: 10
+#        responses:
+#          "password:": "{{ ssh_command_pass_old }}"
+#          "Current password:": "{{ ssh_command_pass_old }}"
+#          "New password:": "{{ ssh_command_pass }}"
+#          "Retype new password:": "{{ ssh_command_pass }}"
+##          # if succesfully login then quit
+#          "\\~\\]\\$": exit
+#      register: status
+#      changed_when: "'password updated successfully' in status.stdout"
+    - name: Get boot command file for to see if modification is required
+      slurp: 
+        src: "/boot/firmware/cmdline.txt"
+      register: boot_command_file
     - debug:
-        var: status
+        msg: "{{ boot_command_file['content'] | b64decode }}"
+    - name: Modify boot command with cgroup settings
+      replace:
+        path: /boot/firmware/cmdline.txt
+        regexp: '^(net(.*)$)'
+        replace: '\1 cgroup_memory=1 cgroup_enable=memory'
+      when: "'cgroup' not in (boot_command_file['content'] | b64decode)"
+      become: true
+
+    - name: "Change hostnames to master-#id or worker-#id (id defined in inventory)"
+      become: true
+      hostname:
+        name: "{{ (item | regex_replace('(^.*)s$', '\\1')) }}-{{id}}"
+      when: item in ["workers","masters"]
+      with_items: "{{group_names}}"
+    - name: Attempting reboot
+      shell: reboot
+      async: 1200
+      poll: 0
+    - name: Waiting for resurection
+      wait_for_connection:
+        delay: 60
+        timeout: 300
+
+
+
 
