@@ -1,0 +1,32 @@
+- hosts: local 
+  gather_facts: no
+  tasks:
+    - name: install pexpect
+      pip:
+        name: pexpect
+      become: yes
+- hosts: k8s_hosts
+  gather_facts: no
+  vars:
+    ssh_command_pass_old: ubuntu
+    ssh_command_pass: ubuntu123!
+  remote_user: root
+  tasks:
+    - name: Set password if expired (happens after fresh reinstall)
+      delegate_to: 127.0.0.1
+      ignore_errors: yes 
+      expect:
+        command: ssh {{ ansible_ssh_common_args }} {{ ansible_user }}@{{ inventory_hostname }}
+        timeout: 10
+        responses:
+          "password:": "{{ ssh_command_pass_old }}"
+          "Current password:": "{{ ssh_command_pass_old }}"
+          "New password:": "{{ ssh_command_pass }}"
+          "Retype new password:": "{{ ssh_command_pass }}"
+#          # if succesfully login then quit
+          "\\~\\]\\$": exit
+      register: status
+      changed_when: "'password updated successfully' in status.stdout"
+    - debug:
+        var: status
+
