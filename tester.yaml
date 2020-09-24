@@ -1,38 +1,44 @@
-
-#- hosts: local
-#  tasks:
-#    - name: Setting host facts using complex arguments
-#      set_fact:
-#        trimmed_names: {{ }}
-#   
-#- hosts: k8s_hosts
-#  gather_facts: no
-#  tasks:
-#    - name: "loop through list"
-#      debug:
-#        msg: "{{ (item.replace('s',''))"
-#      when: item in ["workers","masters"]
-#      with_items: "{{group_names}}"
-
-- hosts: k8s_hosts
+- hosts: masters
+  become: true
   gather_facts: no
   tasks:
-    - name: "loop through list"
-      debug:
-        msg: "{{ (item | regex_replace('(^.*)s$', '\\1')) }}"
-      when: item in ["workers","masters"]
-      with_items: "{{group_names}}"
+#    - name: load br_netfilter module
+#      modprobe:
+#        name: br_netfilter
+#        state: present
+#    - name: Create sysctl file for ip(6)tables (so far unnecessary as default looked fine)
+#      copy:
+#        dest: "/etc/sysctl.d/k8s.conf"
+#        content: |
+#          net.bridge.bridge-nf-call-ip6tables = 1
+#          net.bridge.bridge-nf-call-iptables = 1
+#    - name: Docker installation
+#      apt:
+#        name: docker.io
+#        state: present
+#    - name: Create docker daemon file settings
+#      copy:
+#        dest: "/etc/docker/daemon.json"
+#        content: |
+#          {
+#            "exec-opts": ["native.cgroupdriver=systemd"],
+#            "log-driver": "json-file",
+#            "log-opts": {
+#              "max-size": "100m"
+#          },
+#          "storage-driver": "overlay2"
+#          }
 
-    - debug:
-        var: 
-
-    - name: Set a hostnames
-      hostname:
-        name: "{{ansible_}}"
-
-
-- hosts: k8s_hosts
-  gather_facts: no
-  tasks:
-    - debug:
-        var: hostvars
+#    - name: Docker service directory 
+#      file:
+#        path: /etc/systemd/system/docker.service. d
+#        state: directory
+#        mode: '0755'
+#    - name: Force systemd to reread configs (new docker config)
+#      systemd:
+#        daemon_reload: yes
+    - name: restart docker service
+      systemd:
+        name: docker
+        daemon_reload: yes
+        state: restarted
