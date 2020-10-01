@@ -86,11 +86,23 @@ localhost ansible_ssh_user=root ansible_ssh_pass=root123 ansible_ssh_common_args
 Original contents retained as /root/.ssh/known_hosts.old
 [root@dd1ae25265fa rpi]#
 ```
-* STEP 3: Launch the play
-  145  
-  146  ansible-playbook -i inventory.ini playbook.yml -vv
+* STEP 3: Launch the playbook
 ```
-# Calico installation 
+[root@dd1ae25265fa rpi]# ansible-playbook -i inventory.ini playbook.yml -vv
+ansible-playbook 2.9.13
+  config file = /etc/ansible/ansible.cfg
+  [...]
+```
+* STEP 4: Check the status of the cluster
+
+coredns should fail due to the lack of CNI
+
+# CNI Installation
+
+At this stage the cluster is not fully functionaly because it misses a CNI - so you need to install one.
+Contrail ARM binaries and CRD/operator install not yet available at time of writing... but that is just a matter of time :-) 
+
+## Calico installation 
 
 The basic installation of calico is super simple
 
