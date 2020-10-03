@@ -56,7 +56,7 @@ The plan is to build a kubernetees cluster. Static IP addresses are allocated on
 
 * STEP 1: Clone this repo
 ```
-
+[root@dd1ae25265fa drive]# git clone https://github.com/robric/rpi
 ```
 * STEP 2: Edit the inventory.ini file with the appropriate IP addresses and identifiers
 ```
@@ -94,7 +94,19 @@ ansible-playbook 2.9.13
   [...]
 ```
 * STEP 4: Check the status of the cluster
+```
+ubuntu@master-1:~$ kubectl get pods -A
+NAMESPACE     NAME                                      READY   STATUS    RESTARTS   AGE
+kube-system   coredns-f9fd979d6-ndppl                   1/1     Running   0          18h
+kube-system   coredns-f9fd979d6-q5qq2                   1/1     Running   0          18h
+kube-system   etcd-master-1                             1/1     Running   0          18h
+kube-system   kube-apiserver-master-1                   1/1     Running   0          18h
+kube-system   kube-controller-manager-master-1          1/1     Running   1          18h
+kube-system   kube-proxy-zq9ql                          1/1     Running   0          18h
+kube-system   kube-scheduler-master-1                   1/1     Running   2          18h
+ubuntu@master-1:~$ 
 
+```
 coredns should fail due to the lack of CNI
 
 # CNI Installation
