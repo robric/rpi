@@ -14,11 +14,13 @@
     ssh_command_pass: ubuntu123!
   remote_user: root
   tasks:
+    - debug:
+        msg: "{{ ansible_ssh_common_args }} old pw:{{ ssh_command_pass_old }} new pw:{{ ssh_command_pass }}"
     - name: Set password if expired (happens after fresh reinstall)
       delegate_to: 127.0.0.1
       ignore_errors: yes 
       expect:
-        command: ssh {{ ansible_ssh_common_args }} {{ ansible_user }}@{{ inventory_hostname }}
+        command: "ssh {{ ansible_ssh_common_args }} {{ ansible_user }}@{{ inventory_hostname }}"
         timeout: 10
         responses:
           "password:": "{{ ssh_command_pass_old }}"
@@ -57,13 +59,8 @@
       wait_for_connection:
         delay: 60
         timeout: 300
-
-- hosts: masters
-  become: true
-  gather_facts: no
-  tasks:
     - name: load br_netfilter module
-      community.general.modprobe:
+      modprobe:
         name: br_netfilter
         state: present
     - name: set sysctl for iptables
@@ -104,5 +101,49 @@
         daemon_reload: yes
         state: restarted
 
+    - name: Add apt key from google
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present            
+    - name: Add k8S (xenial still the latest) repository into apt sources
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: kubernetes
+    - name: Run the equivalent of "apt-get update" as a separate step
+      apt:
+        update_cache: yes
+- hosts: masters
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Install kubeadm kubelet and kubectl
+      apt:
+        name: 
+          - kubelet
+          - kubeadm
+          - kubectl
+        update_cache: yes
+        state: present
+    - name: In case this is a second pass we delete old K8s install
+      command: "kubeadm reset --force"
+    - name: Initialize the Kubernetes cluster using kubeadm
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      register: status
+    - debug: 
+        var: status
 
+    - name: Create .kube in ubuntu home
+      become: no
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        mode: 0755
 
+    - name: copy kubernetes admin.conf to root home dir
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+ 
