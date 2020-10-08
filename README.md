@@ -93,25 +93,22 @@ ansible-playbook 2.9.13
   config file = /etc/ansible/ansible.cfg
   [...]
 ```
-* STEP 4: Check the status of the cluster
-```
-ubuntu@master-1:~$ kubectl get pods -A
-NAMESPACE     NAME                                      READY   STATUS    RESTARTS   AGE
-kube-system   coredns-f9fd979d6-ndppl                   1/1     Running   0          18h
-kube-system   coredns-f9fd979d6-q5qq2                   1/1     Running   0          18h
-kube-system   etcd-master-1                             1/1     Running   0          18h
-kube-system   kube-apiserver-master-1                   1/1     Running   0          18h
-kube-system   kube-controller-manager-master-1          1/1     Running   1          18h
-kube-system   kube-proxy-zq9ql                          1/1     Running   0          18h
-kube-system   kube-scheduler-master-1                   1/1     Running   2          18h
-ubuntu@master-1:~$ 
+* Check cluster
 
-```
-coredns should fail due to the lack of CNI
+Unfortunately, the cluster does not fully work on this setup due to the fact that the worker RPI is 32 bit ARM, and there is no 32 ARM binaries for calico :-(
 
-# CNI Installation
+Still you can create pods on the master (the master taint has been removed so scheduling can happen to the master).
 
-At this stage the cluster is not fully functionaly because it misses a CNI - so you need to install one.
+Damn ! 
+
+# APPENDIX Manual CNI Installation
+
+This part is actually automated in the playbook.
+
+
+## Warning
+
+Without CNI, the K8S cluster is not fully functionaly  - so you need to install one.
 Contrail ARM binaries and CRD/operator install not yet available at time of writing... but that is just a matter of time :-) 
 
 ## Calico installation 
