@@ -177,7 +177,7 @@
       set_fact: tokenvalue="{{hostvars[masterip]['token']['stdout']}}"
       when: "'workers' in {{group_names}}"
     - name: workers to join cluster via kubeadm
-      shell: "kubeadm join --token {{tokenvalue}} --discovery-token-unsafe-skip-ca-verification 192.168.1.150:6443"
+      shell: "kubeadm join --token {{tokenvalue}} --discovery-token-unsafe-skip-ca-verification {{masterip}}:6443"
       register: status.
       become: yes
       when: "'workers' in {{group_names}}"
