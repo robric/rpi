@@ -113,10 +113,6 @@
     - name: Run the equivalent of "apt-get update" as a separate step
       apt:
         update_cache: yes
-- hosts: masters
-  become: true
-  gather_facts: no
-  tasks:
     - name: Install kubeadm kubelet and kubectl
       apt:
         name: 
@@ -125,6 +121,10 @@
           - kubectl
         update_cache: yes
         state: present
+- hosts: masters
+  become: true
+  gather_facts: no
+  tasks:
     - name: In case this is a second pass we delete old K8s install
       command: "kubeadm reset --force"
     - name: Initialize the Kubernetes cluster using kubeadm
@@ -146,4 +146,45 @@
         dest: /home/ubuntu/.kube/config
         remote_src: yes
         owner: ubuntu
+
+    - name: Get Calico manifest for installation
+      uri:
+        url: 'https://docs.projectcalico.org/manifests/calico.yaml'
+        method: GET
+        creates: '/home/ubuntu/calico.yaml'
+        dest: '/home/ubuntu/calico.yaml'
+    - name: Install Calico
+      command: kubectl apply -f calico.yaml
+      register: status
+      become: false
+    - debug: 
+        var: status
+      
+    - name: Get the cluster token 
+      shell: kubeadm token list | grep bootstrap | awk {'print $1'}
+      register: token
+      become: false
+      when: "'masters' in {{group_names}}"
+    - debug: 
+        msg: "Got the token {{token.stdout}}"
+      when: "'masters' in {{group_names}}"
+
+    - name: create fact based on token for cross host use
+      set_fact: masterip="{{hostvars['localhost']['groups']['masters'][0]}}"
+      when: "'workers' in {{group_names}}"
+ 
+    - name: Create fact based on token for cross host use
+      set_fact: tokenvalue="{{hostvars[masterip]['token']['stdout']}}"
+      when: "'workers' in {{group_names}}"
+    - name: workers to join cluster via kubeadm
+      shell: "kubeadm join --token {{tokenvalue}} --discovery-token-unsafe-skip-ca-verification 192.168.1.150:6443"
+      register: status.
+      become: yes
+      when: "'workers' in {{group_names}}"
+      
+    - name: Untaint master node to get master 
+      command: kubectl taint nodes --all node-role.kubernetes.io/master-
+      register: status
+      become: false
+      when: "'masters' in {{group_names}}"
  
